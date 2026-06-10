@@ -1,0 +1,29 @@
+/* Filters line customization */
+.queries-filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Query cell truncation */
+.truncated-desc {
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.truncated-desc:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.query-actions {
+  display: flex;
+  gap: 8px;
+}

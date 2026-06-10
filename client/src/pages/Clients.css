@@ -1,0 +1,39 @@
+/* Clients page header */
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Client list wrapper */
+.clients-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Client quick view/action triggers */
+.client-name-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.client-name-link:hover {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+.client-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
