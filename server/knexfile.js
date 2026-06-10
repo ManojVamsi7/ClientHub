@@ -1,20 +1,27 @@
 require('dotenv').config();
+const path = require('path');
+
+const isVercel = !!process.env.VERCEL;
+// On Vercel, the root folder is read-only, so we must output SQLite files to /tmp/
+const dbPath = isVercel ? '/tmp/db.sqlite3' : path.resolve(__dirname, 'db.sqlite3');
+
+const devConfig = {
+  client: 'sqlite3',
+  connection: {
+    filename: dbPath
+  },
+  useNullAsDefault: true,
+  migrations: {
+    directory: path.resolve(__dirname, 'db/migrations'),
+    tableName: 'knex_migrations',
+  },
+  seeds: {
+    directory: path.resolve(__dirname, 'db/seeds'),
+  },
+};
 
 module.exports = {
-  development: {
-    client: 'sqlite3',
-    connection: {
-      filename: './db.sqlite3'
-    },
-    useNullAsDefault: true,
-    migrations: {
-      directory: './db/migrations',
-      tableName: 'knex_migrations',
-    },
-    seeds: {
-      directory: './db/seeds',
-    },
-  },
+  development: devConfig,
 
   test: {
     client: 'pg',
@@ -30,30 +37,32 @@ module.exports = {
       max: 10,
     },
     migrations: {
-      directory: './db/migrations',
+      directory: path.resolve(__dirname, 'db/migrations'),
       tableName: 'knex_migrations',
     },
     seeds: {
-      directory: './db/seeds',
+      directory: path.resolve(__dirname, 'db/seeds'),
     },
   },
 
-  production: {
-    client: 'pg',
-    connection: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-    },
-    pool: {
-      min: 2,
-      max: 10,
-    },
-    migrations: {
-      directory: './db/migrations',
-      tableName: 'knex_migrations',
-    },
-    seeds: {
-      directory: './db/seeds',
-    },
-  },
+  production: process.env.DATABASE_URL
+    ? {
+        client: 'pg',
+        connection: {
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+        },
+        pool: {
+          min: 2,
+          max: 10,
+        },
+        migrations: {
+          directory: path.resolve(__dirname, 'db/migrations'),
+          tableName: 'knex_migrations',
+        },
+        seeds: {
+          directory: path.resolve(__dirname, 'db/seeds'),
+        },
+      }
+    : devConfig, // Fallback to SQLite in /tmp if DATABASE_URL is not set
 };
