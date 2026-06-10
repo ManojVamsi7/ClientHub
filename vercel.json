@@ -3,7 +3,13 @@
   "builds": [
     {
       "src": "server/server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "server/db/migrations/**",
+          "server/db/seeds/**"
+        ]
+      }
     },
     {
       "src": "client/package.json",
