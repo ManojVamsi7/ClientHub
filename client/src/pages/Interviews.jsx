@@ -70,6 +70,8 @@ const Interviews = () => {
 
   // Client search in form modal
   const [formClientSearch, setFormClientSearch] = useState('');
+  const [selectedClientInfo, setSelectedClientInfo] = useState(null);
+  const debouncedFormClientSearch = useDebounce(formClientSearch, 300);
 
   // Fetch interviews
   const fetchInterviews = useCallback(async () => {
@@ -104,11 +106,16 @@ const Interviews = () => {
     fetchInterviews();
   }, [fetchInterviews]);
 
-  // Load clients for dropdown (same data from the Clients section)
+  // Load clients dynamically for the modal dropdown based on search
   useEffect(() => {
     const fetchClientsForDropdown = async () => {
+      if (!isFormOpen) return;
       try {
-        const response = await clientService.getClients({ limit: 500 });
+        const params = { limit: 100 };
+        if (debouncedFormClientSearch) {
+          params.search = debouncedFormClientSearch;
+        }
+        const response = await clientService.getClients(params);
         setClients(response.data.data);
       } catch (error) {
         console.error('Error fetching clients for dropdown:', error);
@@ -118,7 +125,7 @@ const Interviews = () => {
     if (isRecruiter) {
       fetchClientsForDropdown();
     }
-  }, [isRecruiter]);
+  }, [debouncedFormClientSearch, isFormOpen, isRecruiter]);
 
   // Reset pagination on filter change
   useEffect(() => {
@@ -138,19 +145,11 @@ const Interviews = () => {
     }));
   };
 
-  // Filter clients for form dropdown
-  const filteredFormClients = formClientSearch
-    ? clients.filter(
-        (c) =>
-          c.name.toLowerCase().includes(formClientSearch.toLowerCase()) ||
-          (c.email && c.email.toLowerCase().includes(formClientSearch.toLowerCase()))
-      )
-    : clients;
-
   // Open Form Modal
   const openFormModal = () => {
     setFormErrors({});
     setFormClientId('');
+    setSelectedClientInfo(null);
     setFormRecruiterName(user?.username || '');
     setFormDate(new Date().toISOString().substring(0, 10));
     setFormPosition('');
@@ -218,13 +217,7 @@ const Interviews = () => {
     }
   };
 
-  // Get selected client details for display
-  const getSelectedClientInfo = () => {
-    if (!formClientId) return null;
-    return clients.find((c) => c.id === formClientId);
-  };
-
-  const selectedClientInfo = getSelectedClientInfo();
+  // Selected client info is tracked directly as state variable
 
   // Columns definition
   const columns = [
@@ -475,7 +468,7 @@ const Interviews = () => {
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'rgba(15, 23, 42, 0.3)',
             }}>
-              {filteredFormClients.length === 0 ? (
+              {clients.length === 0 ? (
                 <div style={{
                   padding: '16px',
                   textAlign: 'center',
@@ -485,10 +478,15 @@ const Interviews = () => {
                   No clients found. Add clients in the Clients section first.
                 </div>
               ) : (
-                filteredFormClients.map((c) => (
+                clients.map((c) => (
                   <div
                     key={c.id}
-                    onClick={() => !formLoading && setFormClientId(c.id)}
+                    onClick={() => {
+                      if (!formLoading) {
+                        setFormClientId(c.id);
+                        setSelectedClientInfo(c);
+                      }
+                    }}
                     style={{
                       padding: '10px 14px',
                       cursor: formLoading ? 'default' : 'pointer',

@@ -65,15 +65,8 @@ const Queries = () => {
   const [formNotes, setFormNotes] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [formClientSearch, setFormClientSearch] = useState('');
-
-  // Filter clients for form dropdown search
-  const filteredFormClients = formClientSearch
-    ? clients.filter(
-        (c) =>
-          c.name.toLowerCase().includes(formClientSearch.toLowerCase()) ||
-          (c.email && c.email.toLowerCase().includes(formClientSearch.toLowerCase()))
-      )
-    : clients;
+  const [selectedClientInfo, setSelectedClientInfo] = useState(null);
+  const debouncedFormClientSearch = useDebounce(formClientSearch, 300);
 
   // Fetch Queries
   const fetchQueries = useCallback(async () => {
@@ -107,11 +100,16 @@ const Queries = () => {
     fetchQueries();
   }, [fetchQueries]);
 
-  // Load clients list for creation selector
+  // Load clients list for creation selector dynamically
   useEffect(() => {
     const fetchClients = async () => {
+      if (!isFormOpen) return;
       try {
-        const response = await clientService.getClients({ limit: 1000 });
+        const params = { limit: 100 };
+        if (debouncedFormClientSearch) {
+          params.search = debouncedFormClientSearch;
+        }
+        const response = await clientService.getClients(params);
         setClients(response.data.data);
       } catch (error) {
         console.error('Error fetching clients for dropdown:', error);
@@ -121,7 +119,7 @@ const Queries = () => {
     if (isRecruiter) {
       fetchClients();
     }
-  }, [isRecruiter]);
+  }, [debouncedFormClientSearch, isFormOpen, isRecruiter]);
 
   // Reset pagination on filter change
   useEffect(() => {
@@ -138,6 +136,7 @@ const Queries = () => {
   const openFormModal = (query = null) => {
     setFormErrors({});
     setFormClientSearch('');
+    setSelectedClientInfo(null);
     if (query) {
       setSelectedQuery(query);
       setFormClientId(query.client_id);
@@ -417,7 +416,7 @@ const Queries = () => {
                 borderRadius: 'var(--radius-md)',
                 backgroundColor: 'rgba(15, 23, 42, 0.3)',
               }}>
-                {filteredFormClients.length === 0 ? (
+                {clients.length === 0 ? (
                   <div style={{
                     padding: '16px',
                     textAlign: 'center',
@@ -427,10 +426,15 @@ const Queries = () => {
                     No clients found. Add clients in the Clients section first.
                   </div>
                 ) : (
-                  filteredFormClients.map((c) => (
+                  clients.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => !formLoading && setFormClientId(c.id)}
+                      onClick={() => {
+                        if (!formLoading) {
+                          setFormClientId(c.id);
+                          setSelectedClientInfo(c);
+                        }
+                      }}
                       style={{
                         padding: '10px 14px',
                         cursor: formLoading ? 'default' : 'pointer',
@@ -468,6 +472,20 @@ const Queries = () => {
                   ))
                 )}
               </div>
+              {selectedClientInfo && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(99, 102, 241, 0.2)',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                }}>
+                  <strong style={{ color: 'var(--primary)' }}>Selected:</strong> {selectedClientInfo.name}
+                  {selectedClientInfo.email && ` — ${selectedClientInfo.email}`}
+                </div>
+              )}
               {formErrors.clientId && <span className="form-error">{formErrors.clientId}</span>}
             </div>
           ) : (
