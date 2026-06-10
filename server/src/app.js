@@ -18,6 +18,21 @@ const studentRoutes = require('./routes/student.routes');
 
 const app = express();
 
+// Trust reverse proxy (Vercel, etc.) to allow express-rate-limit to read client IPs
+app.set('trust proxy', 1);
+
+// Database initialization barrier middleware
+app.use(async (req, res, next) => {
+  if (app.dbInitializationPromise) {
+    try {
+      await app.dbInitializationPromise;
+    } catch (err) {
+      return next(err);
+    }
+  }
+  next();
+});
+
 // Global middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());

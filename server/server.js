@@ -61,6 +61,6 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-start();
+app.dbInitializationPromise = start();
 
 module.exports = app;
