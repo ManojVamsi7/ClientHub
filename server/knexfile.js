@@ -53,8 +53,9 @@ module.exports = {
           ssl: { rejectUnauthorized: false },
         },
         pool: {
-          min: 2,
-          max: 10,
+          min: 0,
+          max: 2,
+          idleTimeoutMillis: 5000,
         },
         migrations: {
           directory: path.resolve(__dirname, 'db/migrations'),
