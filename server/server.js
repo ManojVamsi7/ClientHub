@@ -7,32 +7,39 @@ const PORT = config.port;
 
 const start = async () => {
   try {
-    // Test database connection
-    await db.raw('SELECT 1');
-    console.log('✅ Database connected successfully');
+    if (config.nodeEnv === 'development') {
+      // Test database connection locally
+      await db.raw('SELECT 1');
+      console.log('✅ Database connected successfully');
 
-    // Run pending migrations
-    await db.migrate.latest();
-    console.log('✅ Migrations up to date');
+      // Run pending migrations
+      await db.migrate.latest();
+      console.log('✅ Migrations up to date');
 
-    // Ensure at least one admin user exists
-    const usersCount = await db('users').count('id as count').first();
-    const count = parseInt(usersCount ? (usersCount.count ?? usersCount['count(*)'] ?? 0) : 0);
-    if (count === 0) {
-      console.log('No users found in database. Seeding default users...');
-      const bcrypt = require('bcrypt');
-      const { v4: uuidv4 } = require('uuid');
-      const adminPassword = await bcrypt.hash('Admin123!', 10);
-      const recruiterPassword = await bcrypt.hash('Recruit123!', 10);
-      const viewerPassword = await bcrypt.hash('Viewer123!', 10);
-      
-      await db('users').insert([
-        { id: uuidv4(), username: 'admin', email: 'admin@example.com', password: adminPassword, role: 'admin' },
-        { id: uuidv4(), username: 'sarah_recruiter', email: 'sarah@example.com', password: recruiterPassword, role: 'recruiter' },
-        { id: uuidv4(), username: 'mike_recruiter', email: 'mike@example.com', password: recruiterPassword, role: 'recruiter' },
-        { id: uuidv4(), username: 'viewer_user', email: 'viewer@example.com', password: viewerPassword, role: 'viewer' },
-      ]);
-      console.log('✅ Default users seeded successfully');
+      // Ensure at least one admin user exists
+      const usersCount = await db('users').count('id as count').first();
+      const count = parseInt(usersCount ? (usersCount.count ?? usersCount['count(*)'] ?? 0) : 0);
+      if (count === 0) {
+        console.log('No users found in database. Seeding default users...');
+        const bcrypt = require('bcrypt');
+        const { v4: uuidv4 } = require('uuid');
+        const adminPassword = await bcrypt.hash('Admin123!', 10);
+        const recruiterPassword = await bcrypt.hash('Recruit123!', 10);
+        const viewerPassword = await bcrypt.hash('Viewer123!', 10);
+        
+        await db('users').insert([
+          { id: uuidv4(), username: 'admin', email: 'admin@example.com', password: adminPassword, role: 'admin' },
+          { id: uuidv4(), username: 'sarah_recruiter', email: 'sarah@example.com', password: recruiterPassword, role: 'recruiter' },
+          { id: uuidv4(), username: 'mike_recruiter', email: 'mike@example.com', password: recruiterPassword, role: 'recruiter' },
+          { id: uuidv4(), username: 'viewer_user', email: 'viewer@example.com', password: viewerPassword, role: 'viewer' },
+        ]);
+        console.log('✅ Default users seeded successfully');
+      }
+    } else {
+      // In production (Vercel), test database connection asynchronously so startup is instant
+      db.raw('SELECT 1')
+        .then(() => console.log('✅ Database connected successfully'))
+        .catch((err) => console.error('⚠️ Database connection warning on startup:', err.message));
     }
 
     if (require.main === module) {
