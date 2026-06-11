@@ -13,6 +13,7 @@ import StatCard from '../components/ui/StatCard';
 import QueryStatusChart from '../components/charts/QueryStatusChart';
 import InterviewTimelineChart from '../components/charts/InterviewTimelineChart';
 import RecruiterPerformanceChart from '../components/charts/RecruiterPerformanceChart';
+import DomainInterviewsChart from '../components/charts/DomainInterviewsChart';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { timeAgo } from '../utils/formatters';
 import toast from 'react-hot-toast';
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const [queryBreakdown, setQueryBreakdown] = useState([]);
   const [interviewTimeline, setInterviewTimeline] = useState([]);
   const [recruiterPerf, setRecruiterPerf] = useState([]);
+  const [domainInterviews, setDomainInterviews] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
@@ -44,13 +46,15 @@ const Dashboard = () => {
           activityRes,
           timelineRes,
           recruiterRes,
-          queryStatusRes
+          queryStatusRes,
+          domainInterviewsRes
         ] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getRecentActivity(),
           dashboardService.getInterviewTimeline(),
           dashboardService.getRecruiterPerformance(),
-          dashboardService.getQueryStatusBreakdown()
+          dashboardService.getQueryStatusBreakdown(),
+          dashboardService.getDomainInterviews()
         ]);
 
         setStats(statsRes.data.data);
@@ -58,6 +62,7 @@ const Dashboard = () => {
         setInterviewTimeline(timelineRes.data.data);
         setRecruiterPerf(recruiterRes.data.data);
         setQueryBreakdown(queryStatusRes.data.data);
+        setDomainInterviews(domainInterviewsRes.data.data);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
         toast.error('Failed to load dashboard metrics.');
@@ -130,12 +135,16 @@ const Dashboard = () => {
         <InterviewTimelineChart data={interviewTimeline} />
       </div>
 
-      {/* Charts Row 2 & Activity Feed */}
+      {/* Charts Row 2 */}
       <div className="dashboard-charts-row">
         <RecruiterPerformanceChart data={recruiterPerf} />
+        <DomainInterviewsChart data={domainInterviews} />
+      </div>
 
+      {/* Full Row - Recent Activity Feed */}
+      <div className="dashboard-full-row">
         {/* Recent Activity Card */}
-        <div className="activity-card">
+        <div className="activity-card" style={{ maxHeight: '400px' }}>
           <div className="activity-header">
             <h3 className="activity-title">Recent System Activities</h3>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Latest updates</span>

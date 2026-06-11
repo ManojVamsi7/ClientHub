@@ -46,10 +46,20 @@ const getRecentActivity = async (req, res, next) => {
   }
 };
 
+const getDomainInterviews = async (req, res, next) => {
+  try {
+    const data = await dashboardService.getDomainInterviews();
+    success(res, data);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getStats,
   getRecruiterPerformance,
   getQueryStatus,
   getInterviewTimeline,
   getRecentActivity,
+  getDomainInterviews,
 };

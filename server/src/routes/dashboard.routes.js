@@ -9,5 +9,6 @@ router.get('/interview-timeline', dashboardController.getInterviewTimeline);
 // Reports
 router.get('/reports/recruiter-performance', dashboardController.getRecruiterPerformance);
 router.get('/reports/query-status', dashboardController.getQueryStatus);
+router.get('/reports/domain-interviews', dashboardController.getDomainInterviews);
 
 module.exports = router;

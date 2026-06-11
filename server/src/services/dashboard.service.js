@@ -159,10 +159,29 @@ const getRecentActivity = async (limit = 10) => {
   return all;
 };
 
+const getDomainInterviews = async () => {
+  const breakdown = await db('interview_calls as ic')
+    .join('clients as c', 'ic.client_id', 'c.id')
+    .whereNull('ic.deleted_at')
+    .whereNull('c.deleted_at')
+    .whereNotNull('c.domain')
+    .where('c.domain', '!=', '')
+    .select('c.domain')
+    .count('ic.id as count')
+    .groupBy('c.domain')
+    .orderBy('count', 'desc');
+
+  return breakdown.map((row) => ({
+    name: row.domain,
+    value: parseInt(row.count),
+  }));
+};
+
 module.exports = {
   getStats,
   getRecruiterPerformance,
   getQueryStatusBreakdown,
   getInterviewTimeline,
   getRecentActivity,
+  getDomainInterviews,
 };

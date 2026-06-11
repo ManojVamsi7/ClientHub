@@ -31,6 +31,7 @@ const Clients = () => {
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [interviewStatusFilter, setInterviewStatusFilter] = useState('');
   const [sortColumn, setSortColumn] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('desc');
 
@@ -226,6 +227,7 @@ const Clients = () => {
       if (debouncedSearch) params.search = debouncedSearch;
       if (statusFilter) params.status = statusFilter;
       if (domainFilter) params.domain = domainFilter;
+      if (interviewStatusFilter) params.interview_status = interviewStatusFilter;
 
       const response = await clientService.getClients(params);
       const { data, pagination } = response.data;
@@ -239,7 +241,7 @@ const Clients = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortColumn, sortOrder, debouncedSearch, statusFilter, domainFilter, setPaginationData]);
+  }, [page, limit, sortColumn, sortOrder, debouncedSearch, statusFilter, domainFilter, interviewStatusFilter, setPaginationData]);
 
   useEffect(() => {
     fetchClients();
@@ -248,7 +250,7 @@ const Clients = () => {
   // Reset pagination when filter changes
   useEffect(() => {
     resetPagination();
-  }, [debouncedSearch, statusFilter, domainFilter, resetPagination]);
+  }, [debouncedSearch, statusFilter, domainFilter, interviewStatusFilter, resetPagination]);
 
   const handleSort = (columnKey, order) => {
     setSortColumn(columnKey);
@@ -503,6 +505,28 @@ const Clients = () => {
             </>
           )}
         </div>
+      </div>
+
+      {/* Tabs Row */}
+      <div className="clients-tabs-container">
+        <button 
+          className={`client-tab-btn ${interviewStatusFilter === '' ? 'active' : ''}`}
+          onClick={() => setInterviewStatusFilter('')}
+        >
+          All Clients
+        </button>
+        <button 
+          className={`client-tab-btn ${interviewStatusFilter === 'scheduled' ? 'active' : ''}`}
+          onClick={() => setInterviewStatusFilter('scheduled')}
+        >
+          Interview Scheduled
+        </button>
+        <button 
+          className={`client-tab-btn ${interviewStatusFilter === 'pending' ? 'active' : ''}`}
+          onClick={() => setInterviewStatusFilter('pending')}
+        >
+          Pending Placement
+        </button>
       </div>
 
       {/* Filters Row */}

@@ -5,7 +5,7 @@ const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 
 const list = async (query) => {
   const { limit, offset, sortBy, order } = parsePagination(query);
-  const { search, status, domain } = query;
+  const { search, status, domain, interview_status } = query;
 
   let baseQuery = db('clients').whereNull('deleted_at');
 
@@ -24,6 +24,22 @@ const list = async (query) => {
 
   if (domain) {
     baseQuery = baseQuery.whereILike('domain', `%${domain}%`);
+  }
+
+  if (interview_status === 'scheduled') {
+    baseQuery = baseQuery.whereExists(function () {
+      this.select('*')
+        .from('interview_calls')
+        .whereRaw('interview_calls.client_id = clients.id')
+        .whereNull('interview_calls.deleted_at');
+    });
+  } else if (interview_status === 'pending') {
+    baseQuery = baseQuery.whereNotExists(function () {
+      this.select('*')
+        .from('interview_calls')
+        .whereRaw('interview_calls.client_id = clients.id')
+        .whereNull('interview_calls.deleted_at');
+    });
   }
 
   // Get total count
