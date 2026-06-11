@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import * as clientService from '../services/client.service';
 import { usePagination } from '../hooks/usePagination';
 import { useDebounce } from '../hooks/useDebounce';
-import { Plus, Edit2, Trash2, Search, ExternalLink, Upload, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ExternalLink, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, UserMinus, UserCheck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import SearchBar from '../components/ui/SearchBar';
 import DataTable from '../components/ui/DataTable';
@@ -23,7 +23,9 @@ const Clients = () => {
   const { user, isRecruiter } = useAuth();
   
   // Data State
-  const [clients, setClients] = useState([]);
+  const [activeClients, setActiveClients] = useState([]);
+  const [inactiveClients, setInactiveClients] = useState([]);
+  const [inactiveTotal, setInactiveTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   
   // Filters and Sorting
@@ -87,7 +89,7 @@ const Clients = () => {
       }
     };
     fetchDomains();
-  }, [clients]); // re-fetch when clients change (after import)
+  }, [activeClients]); // re-fetch when activeClients change (after import)
 
   // CSV Parser
   const parseCSV = (text) => {
@@ -217,24 +219,57 @@ const Clients = () => {
   const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
-      const params = {
-        limit,
-        offset: (page - 1) * limit,
+      const baseParams = {
         sort_by: sortColumn,
         order: sortOrder,
       };
 
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (statusFilter) params.status = statusFilter;
-      if (domainFilter) params.domain = domainFilter;
-      if (interviewStatusFilter) params.interview_status = interviewStatusFilter;
+      if (debouncedSearch) baseParams.search = debouncedSearch;
+      if (domainFilter) baseParams.domain = domainFilter;
+      if (interviewStatusFilter) baseParams.interview_status = interviewStatusFilter;
 
-      const response = await clientService.getClients(params);
-      const { data, pagination } = response.data;
+      const promises = [];
+
+      // Fetch active clients if status filter is active or empty
+      const shouldFetchActive = statusFilter === '' || statusFilter === CLIENT_STATUS.ACTIVE;
+      if (shouldFetchActive) {
+        promises.push(
+          clientService.getClients({
+            ...baseParams,
+            limit,
+            offset: (page - 1) * limit,
+            status: CLIENT_STATUS.ACTIVE,
+          }).then(res => ({ type: 'active', data: res.data }))
+        );
+      } else {
+        promises.push(Promise.resolve({ type: 'active', data: { data: [], pagination: { total: 0, totalPages: 0 } } }));
+      }
+
+      // Fetch inactive clients if status filter is inactive or empty
+      const shouldFetchInactive = statusFilter === '' || statusFilter === CLIENT_STATUS.INACTIVE;
+      if (shouldFetchInactive) {
+        promises.push(
+          clientService.getClients({
+            ...baseParams,
+            limit: 100, // Fetch up to 100 inactive clients
+            offset: 0,
+            status: CLIENT_STATUS.INACTIVE,
+          }).then(res => ({ type: 'inactive', data: res.data }))
+        );
+      } else {
+        promises.push(Promise.resolve({ type: 'inactive', data: { data: [], pagination: { total: 0, totalPages: 0 } } }));
+      }
+
+      const results = await Promise.all(promises);
+      const activeResult = results.find(r => r.type === 'active').data;
+      const inactiveResult = results.find(r => r.type === 'inactive').data;
+
+      setActiveClients(activeResult.data);
+      setPaginationData(activeResult.pagination);
+      setInactiveClients(inactiveResult.data);
+      setInactiveTotal(inactiveResult.pagination.total);
       
-      setClients(data);
       setSelectedClientIds([]); // Reset selection when page / filters change
-      setPaginationData(pagination);
     } catch (error) {
       console.error('Error fetching clients:', error);
       toast.error('Failed to load clients.');
@@ -256,6 +291,17 @@ const Clients = () => {
     setSortColumn(columnKey);
     setSortOrder(order);
     resetPagination();
+  };
+
+  const handleToggleStatus = async (client, newStatus) => {
+    try {
+      await clientService.updateClient(client.id, { status: newStatus });
+      toast.success(`Client marked as ${newStatus === CLIENT_STATUS.ACTIVE ? 'active' : 'inactive'}!`);
+      fetchClients();
+    } catch (error) {
+      console.error('Error updating client status:', error);
+      toast.error('Failed to update client status.');
+    }
   };
 
   // Open Form Modal (Add or Edit)
@@ -348,10 +394,10 @@ const Clients = () => {
   };
 
   const handleSelectAllToggle = () => {
-    if (selectedClientIds.length === clients.length) {
+    if (selectedClientIds.length === activeClients.length) {
       setSelectedClientIds([]);
     } else {
-      setSelectedClientIds(clients.map((c) => c.id));
+      setSelectedClientIds(activeClients.map((c) => c.id));
     }
   };
 
@@ -382,14 +428,14 @@ const Clients = () => {
     }
   };
 
-  // Columns Definition
-  const columns = [
+  // Active Columns Definition
+  const activeColumns = [
     ...(user?.role === ROLES.ADMIN ? [{
       key: 'select',
       label: (
         <input 
           type="checkbox" 
-          checked={clients.length > 0 && selectedClientIds.length === clients.length}
+          checked={activeClients.length > 0 && selectedClientIds.length === activeClients.length}
           onChange={handleSelectAllToggle}
           style={{ cursor: 'pointer' }}
         />
@@ -464,6 +510,83 @@ const Clients = () => {
         <div className="client-actions-cell">
           <Button variant="ghost" size="sm" onClick={() => openFormModal(row)} title="Edit Client">
             <Edit2 size={14} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(row, CLIENT_STATUS.INACTIVE)} title="Mark Inactive" style={{ color: 'var(--text-secondary)' }}>
+            <UserMinus size={14} />
+          </Button>
+          {user?.role === ROLES.ADMIN && (
+            <Button variant="ghost" size="sm" style={{ color: 'var(--error)' }} onClick={() => openDeleteDialog(row)} title="Delete Client">
+              <Trash2 size={14} />
+            </Button>
+          )}
+        </div>
+      )
+    }] : [])
+  ];
+
+  // Inactive Columns Definition
+  const inactiveColumns = [
+    {
+      key: 'student_id',
+      label: 'Student ID',
+      sortable: true,
+      render: (row) => row.student_id ? (
+        <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.85rem' }}>{row.student_id}</span>
+      ) : (
+        <span style={{ color: 'var(--text-muted)' }}>—</span>
+      )
+    },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (row) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link to={`/clients/${row.id}`} className="client-name-link" style={{ color: 'var(--text-secondary)' }}>
+            {row.name}
+          </Link>
+          <Link to={`/clients/${row.id}`} style={{ color: 'var(--text-muted)' }} aria-label={`View details for ${row.name}`}>
+            <ExternalLink size={12} />
+          </Link>
+        </div>
+      )
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      render: (row) => row.email || <span style={{ color: 'var(--text-muted)' }}>No Email</span>
+    },
+    {
+      key: 'domain',
+      label: 'Domain',
+      sortable: true,
+      render: (row) => row.domain ? (
+        <Badge variant="info">{row.domain}</Badge>
+      ) : (
+        <span style={{ color: 'var(--text-muted)' }}>—</span>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.status} showDot>
+          {row.status}
+        </Badge>
+      )
+    },
+    ...(isRecruiter ? [{
+      key: 'actions',
+      label: 'Actions',
+      render: (row) => (
+        <div className="client-actions-cell">
+          <Button variant="ghost" size="sm" onClick={() => openFormModal(row)} title="Edit Client">
+            <Edit2 size={14} />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(row, CLIENT_STATUS.ACTIVE)} title="Reactivate Client" style={{ color: 'var(--success)' }}>
+            <UserCheck size={14} />
           </Button>
           {user?.role === ROLES.ADMIN && (
             <Button variant="ghost" size="sm" style={{ color: 'var(--error)' }} onClick={() => openDeleteDialog(row)} title="Delete Client">
@@ -559,27 +682,57 @@ const Clients = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <DataTable
-        columns={columns}
-        data={clients}
-        loading={loading}
-        sortColumn={sortColumn}
-        sortOrder={sortOrder}
-        onSort={handleSort}
-        emptyTitle="No Clients Found"
-        emptyDesc="No clients matched your criteria. Add a new client or import via CSV."
-      />
+      {/* Active Clients Section */}
+      {(statusFilter === '' || statusFilter === CLIENT_STATUS.ACTIVE) && (
+        <div className="active-clients-section">
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>
+            Active Clients ({total})
+          </h3>
+          <DataTable
+            columns={activeColumns}
+            data={activeClients}
+            loading={loading}
+            sortColumn={sortColumn}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            emptyTitle="No Active Clients Found"
+            emptyDesc="No active clients matched your criteria. Add a new client or import via CSV."
+          />
+          
+          {/* Pagination */}
+          {!loading && activeClients.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <Pagination
+                page={page}
+                limit={limit}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Pagination */}
-      {!loading && clients.length > 0 && (
-        <Pagination
-          page={page}
-          limit={limit}
-          total={total}
-          totalPages={totalPages}
-          onPageChange={setPage}
-        />
+      {/* Inactive Clients Section */}
+      {(statusFilter === '' || statusFilter === CLIENT_STATUS.INACTIVE) && (
+        <div className="inactive-clients-section">
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-secondary)' }}>
+            Inactive Clients ({inactiveTotal})
+          </h3>
+          <div className="inactive-table-wrapper">
+            <DataTable
+              columns={inactiveColumns}
+              data={inactiveClients}
+              loading={loading}
+              sortColumn={sortColumn}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              emptyTitle="No Inactive Clients Found"
+              emptyDesc="No inactive clients match the current filters."
+            />
+          </div>
+        </div>
       )}
 
       {/* Add/Edit Modal */}

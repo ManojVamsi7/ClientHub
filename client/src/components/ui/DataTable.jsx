@@ -13,16 +13,25 @@ const DataTable = ({
   onSort,
   emptyTitle,
   emptyDesc,
+  defaultSortColumn = 'created_at',
+  defaultSortOrder = 'desc',
 }) => {
   const handleSort = (column) => {
     if (!column.sortable || !onSort) return;
     
+    let newColumn = column.key;
     let newOrder = 'asc';
+    
     if (sortColumn === column.key) {
-      newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      if (sortOrder === 'asc') {
+        newOrder = 'desc';
+      } else if (sortOrder === 'desc') {
+        newColumn = defaultSortColumn;
+        newOrder = defaultSortOrder;
+      }
     }
     
-    onSort(column.key, newOrder);
+    onSort(newColumn, newOrder);
   };
 
   const renderSortIcon = (column) => {

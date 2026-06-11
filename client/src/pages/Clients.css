@@ -69,3 +69,20 @@
   background-color: rgba(99, 102, 241, 0.1);
   border-color: rgba(99, 102, 241, 0.2);
 }
+
+/* Inactive clients section separation and styling */
+.inactive-clients-section {
+  margin-top: 48px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 32px;
+}
+
+.inactive-table-wrapper {
+  opacity: 0.65;
+  transition: opacity 0.25s ease;
+}
+
+.inactive-table-wrapper:hover {
+  opacity: 0.9;
+}
+
