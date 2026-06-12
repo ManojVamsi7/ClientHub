@@ -168,10 +168,30 @@ const Interviews = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Check for duplicate interview (same client + same date)
+  const checkDuplicate = () => {
+    if (!formClientId || !formDate) return false;
+    return interviews.some(
+      (iv) =>
+        iv.client_id === formClientId &&
+        iv.call_date &&
+        iv.call_date.substring(0, 10) === formDate
+    );
+  };
+
   // Submit form
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    // Duplicate guard
+    if (checkDuplicate()) {
+      toast.error(
+        `⚠️ An interview for ${selectedClientInfo?.name || 'this client'} on ${formDate} already exists. Change the date or select a different client.`,
+        { duration: 5000 }
+      );
+      return;
+    }
 
     setFormLoading(true);
     const payload = {
@@ -439,103 +459,109 @@ const Interviews = () => {
           {/* Client Search & Select */}
           <div className="form-group">
             <label className="form-label">Select Client <span style={{ color: 'var(--error)' }}>*</span></label>
-            <div style={{
-              position: 'relative',
-              marginBottom: '8px',
-            }}>
-              <Search size={14} style={{
-                position: 'absolute',
-                left: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-                pointerEvents: 'none',
-              }} />
-              <input
-                type="text"
-                className="form-input"
-                style={{ paddingLeft: '32px' }}
-                placeholder="Search clients by student ID or name..."
-                value={formClientSearch}
-                onChange={(e) => setFormClientSearch(e.target.value)}
-                disabled={formLoading}
-              />
-            </div>
-            {formClientSearch.trim() && (
-              <div style={{
-                maxHeight: '160px',
-                overflowY: 'auto',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                position: 'absolute',
-                zIndex: 10,
-                width: '100%',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-              }}>
-                {clients.length === 0 ? (
-                  <div style={{
-                    padding: '16px',
-                    textAlign: 'center',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.85rem',
-                  }}>
-                    No clients found.
-                  </div>
-                ) : (
-                  clients.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        if (!formLoading) {
-                          setFormClientId(c.id);
-                          setSelectedClientInfo(c);
-                          setFormClientSearch(''); // Clear search to hide dropdown
-                        }
-                      }}
-                      style={{
-                        padding: '10px 14px',
-                        cursor: formLoading ? 'default' : 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        backgroundColor: formClientId === c.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                        borderBottom: '1px solid var(--border-subtle)',
-                        transition: 'background-color 0.15s ease',
-                        borderLeft: formClientId === c.id ? '3px solid var(--primary)' : '3px solid transparent',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                        <span style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)', minWidth: '80px' }}>
-                          {c.student_id || 'No ID'}
-                        </span>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>— {c.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-                          ({c.email || 'No email'})
-                        </span>
-                      </div>
-                      {formClientId === c.id && (
-                        <span style={{
-                          color: 'var(--primary)',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-sm)',
-                          marginLeft: '8px',
-                        }}>Selected</span>
-                      )}
-                    </div>
-                  ))
-                )}
+            {/* Wrapper with position:relative so the dropdown anchors to the input */}
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', marginBottom: '4px' }}>
+                <Search size={14} style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }} />
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ paddingLeft: '32px' }}
+                  placeholder="Search clients by student ID or name..."
+                  value={formClientSearch}
+                  onChange={(e) => setFormClientSearch(e.target.value)}
+                  disabled={formLoading}
+                  autoComplete="off"
+                />
               </div>
-            )}
+              {/* Dropdown anchored below the input */}
+              {formClientSearch.trim() && (
+                <div style={{
+                  maxHeight: '180px',
+                  overflowY: 'auto',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  zIndex: 9999,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  marginTop: '2px',
+                }}>
+                  {clients.length === 0 ? (
+                    <div style={{
+                      padding: '16px',
+                      textAlign: 'center',
+                      color: 'var(--text-muted)',
+                      fontSize: '0.85rem',
+                    }}>
+                      No clients found.
+                    </div>
+                  ) : (
+                    clients.map((c) => (
+                      <div
+                        key={c.id}
+                        onMouseDown={(e) => {
+                          // Use onMouseDown to fire before the input's onBlur
+                          e.preventDefault();
+                          if (!formLoading) {
+                            setFormClientId(c.id);
+                            setSelectedClientInfo(c);
+                            setFormClientSearch(''); // Clear search to hide dropdown
+                          }
+                        }}
+                        style={{
+                          padding: '10px 14px',
+                          cursor: formLoading ? 'default' : 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          backgroundColor: formClientId === c.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          transition: 'background-color 0.15s ease',
+                          borderLeft: formClientId === c.id ? '3px solid var(--primary)' : '3px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                          <span style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)', flexShrink: 0 }}>
+                            {c.student_id || 'No ID'}
+                          </span>
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>— {c.name}</span>
+                        </div>
+                        {formClientId === c.id && (
+                          <span style={{
+                            color: 'var(--primary)',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            padding: '2px 6px',
+                            borderRadius: 'var(--radius-sm)',
+                            marginLeft: '8px',
+                            flexShrink: 0,
+                          }}>✓</span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             {formErrors.clientId && (
               <span style={{ color: 'var(--error)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
                 {formErrors.clientId}
@@ -554,9 +580,9 @@ const Interviews = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
               }}>
-                <div>
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
                   <strong style={{ color: 'var(--primary)' }}>Selected:</strong>{' '}
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{selectedClientInfo.student_id || 'No ID'}</span> - {selectedClientInfo.name}
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{selectedClientInfo.student_id || 'No ID'}</span> — {selectedClientInfo.name}
                   {selectedClientInfo.email && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '6px' }}>({selectedClientInfo.email})</span>}
                 </div>
                 <button
@@ -576,6 +602,8 @@ const Interviews = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
+                    marginLeft: '8px',
                   }}
                   title="Clear selection"
                   onMouseEnter={(e) => {

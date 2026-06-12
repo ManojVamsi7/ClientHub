@@ -26,6 +26,8 @@ const Clients = () => {
   const [activeClients, setActiveClients] = useState([]);
   const [inactiveClients, setInactiveClients] = useState([]);
   const [inactiveTotal, setInactiveTotal] = useState(0);
+  const [allActiveTotal, setAllActiveTotal] = useState(0); // unfiltered active count for tab label
+  const [filteredTotal, setFilteredTotal] = useState(0);  // sub-filter count
   const [loading, setLoading] = useState(true);
   
   // Filters and Sorting
@@ -227,30 +229,54 @@ const Clients = () => {
       if (debouncedSearch) baseParams.search = debouncedSearch;
       if (domainFilter) baseParams.domain = domainFilter;
 
-      // interviewStatusFilter only applies to active clients
+      // Build filtered params for active clients with interview sub-filter
       const activeParams = { ...baseParams };
       if (interviewStatusFilter) activeParams.interview_status = interviewStatusFilter;
 
-      const [activeResponse, inactiveResponse] = await Promise.all([
+      const requests = [
+        // Filtered active clients (for table)
         clientService.getClients({
           ...activeParams,
           limit,
           offset: (page - 1) * limit,
           status: CLIENT_STATUS.ACTIVE,
         }),
+        // Inactive clients
         clientService.getClients({
           ...baseParams,
-          limit: 100, // Fetch up to 100 inactive clients
+          limit: 100,
           offset: 0,
           status: CLIENT_STATUS.INACTIVE,
-        })
-      ]);
+        }),
+      ];
+
+      // If a sub-filter is active, also fetch unfiltered active count for the tab label
+      if (interviewStatusFilter) {
+        requests.push(
+          clientService.getClients({
+            ...baseParams,
+            limit: 1,
+            offset: 0,
+            status: CLIENT_STATUS.ACTIVE,
+          })
+        );
+      }
+
+      const [activeResponse, inactiveResponse, allActiveResponse] = await Promise.all(requests);
 
       setActiveClients(activeResponse.data.data);
       setPaginationData(activeResponse.data.pagination);
+      setFilteredTotal(activeResponse.data.pagination.total);
       setInactiveClients(inactiveResponse.data.data);
       setInactiveTotal(inactiveResponse.data.pagination.total);
-      
+
+      // Update the unfiltered active total for the tab label
+      if (allActiveResponse) {
+        setAllActiveTotal(allActiveResponse.data.pagination.total);
+      } else {
+        setAllActiveTotal(activeResponse.data.pagination.total);
+      }
+
       setSelectedClientIds([]); // Reset selection when page / filters change
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -616,9 +642,9 @@ const Clients = () => {
       <div className="tabs-container">
         <button 
           className={`tab ${activeTab === 'active' ? 'active' : ''}`}
-          onClick={() => setActiveTab('active')}
+          onClick={() => { setActiveTab('active'); setInterviewStatusFilter(''); }}
         >
-          Active Clients ({total})
+          Active Clients ({allActiveTotal})
         </button>
         <button 
           className={`tab ${activeTab === 'inactive' ? 'active' : ''}`}
@@ -628,26 +654,26 @@ const Clients = () => {
         </button>
       </div>
 
-      {/* Tabs Row (only for active clients) */}
+      {/* Sub-filter Tabs Row (only for active clients) */}
       {activeTab === 'active' && (
         <div className="clients-tabs-container">
           <button 
             className={`client-tab-btn ${interviewStatusFilter === '' ? 'active' : ''}`}
             onClick={() => setInterviewStatusFilter('')}
           >
-            All Clients
+            All Clients ({interviewStatusFilter === '' ? allActiveTotal : allActiveTotal})
           </button>
           <button 
             className={`client-tab-btn ${interviewStatusFilter === 'scheduled' ? 'active' : ''}`}
             onClick={() => setInterviewStatusFilter('scheduled')}
           >
-            Interview Scheduled
+            Interview Scheduled {interviewStatusFilter === 'scheduled' ? `(${filteredTotal})` : ''}
           </button>
           <button 
             className={`client-tab-btn ${interviewStatusFilter === 'pending' ? 'active' : ''}`}
             onClick={() => setInterviewStatusFilter('pending')}
           >
-            Pending Placement
+            Pending Placement {interviewStatusFilter === 'pending' ? `(${filteredTotal})` : ''}
           </button>
         </div>
       )}

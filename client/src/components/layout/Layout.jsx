@@ -5,7 +5,8 @@ import Header from './Header';
 import './layout.css';
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);       // mobile overlay open
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapsed
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -15,14 +16,23 @@ const Layout = () => {
     setSidebarOpen(false);
   };
 
+  const toggleCollapse = () => {
+    setSidebarCollapsed((prev) => !prev);
+  };
+
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
       {/* Backdrop for mobile */}
       {sidebarOpen && (
         <div className="sidebar-backdrop" onClick={closeSidebar} />
       )}
 
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        isCollapsed={sidebarCollapsed}
+        onClose={closeSidebar}
+        onToggleCollapse={toggleCollapse}
+      />
 
       <div className="main-container">
         <Header onMenuToggle={toggleSidebar} />

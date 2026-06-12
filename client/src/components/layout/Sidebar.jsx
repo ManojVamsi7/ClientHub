@@ -8,10 +8,12 @@ import {
   PhoneCall, 
   AlertTriangle, 
   LogOut, 
-  Activity 
+  Activity,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, isCollapsed, onClose, onToggleCollapse }) => {
   const { user, logout } = useAuth();
 
   const navItems = [
@@ -27,7 +29,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (onClose) onClose();
   };
 
-  // Get initials for avatar
   const getInitials = (name) => {
     if (!name) return 'U';
     return name
@@ -39,14 +40,16 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   return (
-    <aside className={`app-sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+    <aside className={`app-sidebar ${isOpen ? 'sidebar-open' : ''} ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Header / Logo */}
       <div className="sidebar-header">
         <div className="logo-container">
           <Activity size={20} />
         </div>
-        <span className="logo-text">ClientHub</span>
+        {!isCollapsed && <span className="logo-text">ClientHub</span>}
       </div>
 
+      {/* Nav items */}
       <nav className="sidebar-nav">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -57,16 +60,18 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClick={onClose}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               end={item.to === '/'}
+              title={isCollapsed ? item.label : undefined}
             >
-              <Icon size={18} />
-              <span>{item.label}</span>
+              <Icon size={18} className="nav-icon" />
+              {!isCollapsed && <span>{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
+      {/* Footer */}
       <div className="sidebar-footer">
-        {user && (
+        {user && !isCollapsed && (
           <div className="user-profile">
             <div className="user-avatar">
               {getInitials(user.username)}
@@ -77,9 +82,26 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
           </div>
         )}
-        <button onClick={handleLogout} className="logout-btn">
+        {user && isCollapsed && (
+          <div className="user-profile" style={{ justifyContent: 'center', padding: '8px 0' }}>
+            <div className="user-avatar" title={user.username}>
+              {getInitials(user.username)}
+            </div>
+          </div>
+        )}
+        <button onClick={handleLogout} className={`logout-btn ${isCollapsed ? 'logout-btn-icon' : ''}`} title="Log Out">
           <LogOut size={16} />
-          <span>Log Out</span>
+          {!isCollapsed && <span>Log Out</span>}
+        </button>
+
+        {/* Desktop collapse toggle */}
+        <button
+          onClick={onToggleCollapse}
+          className="sidebar-collapse-btn"
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {!isCollapsed && <span>Collapse</span>}
         </button>
       </div>
     </aside>
