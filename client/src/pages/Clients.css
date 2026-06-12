@@ -72,17 +72,39 @@
 
 /* Inactive clients section separation and styling */
 .inactive-clients-section {
-  margin-top: 48px;
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 32px;
+  margin-top: 0px;
 }
 
 .inactive-table-wrapper {
-  opacity: 0.65;
-  transition: opacity 0.25s ease;
+  opacity: 1;
 }
 
-.inactive-table-wrapper:hover {
-  opacity: 0.9;
+/* Tabs for Active/Inactive Clients */
+.tabs-container {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-subtle);
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 

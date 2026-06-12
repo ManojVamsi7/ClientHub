@@ -31,7 +31,7 @@ const Clients = () => {
   // Filters and Sorting
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('active');
   const [domainFilter, setDomainFilter] = useState('');
   const [interviewStatusFilter, setInterviewStatusFilter] = useState('');
   const [sortColumn, setSortColumn] = useState('created_at');
@@ -226,48 +226,30 @@ const Clients = () => {
 
       if (debouncedSearch) baseParams.search = debouncedSearch;
       if (domainFilter) baseParams.domain = domainFilter;
-      if (interviewStatusFilter) baseParams.interview_status = interviewStatusFilter;
 
-      const promises = [];
+      // interviewStatusFilter only applies to active clients
+      const activeParams = { ...baseParams };
+      if (interviewStatusFilter) activeParams.interview_status = interviewStatusFilter;
 
-      // Fetch active clients if status filter is active or empty
-      const shouldFetchActive = statusFilter === '' || statusFilter === CLIENT_STATUS.ACTIVE;
-      if (shouldFetchActive) {
-        promises.push(
-          clientService.getClients({
-            ...baseParams,
-            limit,
-            offset: (page - 1) * limit,
-            status: CLIENT_STATUS.ACTIVE,
-          }).then(res => ({ type: 'active', data: res.data }))
-        );
-      } else {
-        promises.push(Promise.resolve({ type: 'active', data: { data: [], pagination: { total: 0, totalPages: 0 } } }));
-      }
+      const [activeResponse, inactiveResponse] = await Promise.all([
+        clientService.getClients({
+          ...activeParams,
+          limit,
+          offset: (page - 1) * limit,
+          status: CLIENT_STATUS.ACTIVE,
+        }),
+        clientService.getClients({
+          ...baseParams,
+          limit: 100, // Fetch up to 100 inactive clients
+          offset: 0,
+          status: CLIENT_STATUS.INACTIVE,
+        })
+      ]);
 
-      // Fetch inactive clients if status filter is inactive or empty
-      const shouldFetchInactive = statusFilter === '' || statusFilter === CLIENT_STATUS.INACTIVE;
-      if (shouldFetchInactive) {
-        promises.push(
-          clientService.getClients({
-            ...baseParams,
-            limit: 100, // Fetch up to 100 inactive clients
-            offset: 0,
-            status: CLIENT_STATUS.INACTIVE,
-          }).then(res => ({ type: 'inactive', data: res.data }))
-        );
-      } else {
-        promises.push(Promise.resolve({ type: 'inactive', data: { data: [], pagination: { total: 0, totalPages: 0 } } }));
-      }
-
-      const results = await Promise.all(promises);
-      const activeResult = results.find(r => r.type === 'active').data;
-      const inactiveResult = results.find(r => r.type === 'inactive').data;
-
-      setActiveClients(activeResult.data);
-      setPaginationData(activeResult.pagination);
-      setInactiveClients(inactiveResult.data);
-      setInactiveTotal(inactiveResult.pagination.total);
+      setActiveClients(activeResponse.data.data);
+      setPaginationData(activeResponse.data.pagination);
+      setInactiveClients(inactiveResponse.data.data);
+      setInactiveTotal(inactiveResponse.data.pagination.total);
       
       setSelectedClientIds([]); // Reset selection when page / filters change
     } catch (error) {
@@ -276,7 +258,7 @@ const Clients = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortColumn, sortOrder, debouncedSearch, statusFilter, domainFilter, interviewStatusFilter, setPaginationData]);
+  }, [page, limit, sortColumn, sortOrder, debouncedSearch, domainFilter, interviewStatusFilter, setPaginationData]);
 
   useEffect(() => {
     fetchClients();
@@ -285,7 +267,7 @@ const Clients = () => {
   // Reset pagination when filter changes
   useEffect(() => {
     resetPagination();
-  }, [debouncedSearch, statusFilter, domainFilter, interviewStatusFilter, resetPagination]);
+  }, [debouncedSearch, activeTab, domainFilter, interviewStatusFilter, resetPagination]);
 
   const handleSort = (columnKey, order) => {
     setSortColumn(columnKey);
@@ -630,27 +612,45 @@ const Clients = () => {
         </div>
       </div>
 
-      {/* Tabs Row */}
-      <div className="clients-tabs-container">
+      {/* Top level Active/Inactive Tabs */}
+      <div className="tabs-container">
         <button 
-          className={`client-tab-btn ${interviewStatusFilter === '' ? 'active' : ''}`}
-          onClick={() => setInterviewStatusFilter('')}
+          className={`tab ${activeTab === 'active' ? 'active' : ''}`}
+          onClick={() => setActiveTab('active')}
         >
-          All Clients
+          Active Clients ({total})
         </button>
         <button 
-          className={`client-tab-btn ${interviewStatusFilter === 'scheduled' ? 'active' : ''}`}
-          onClick={() => setInterviewStatusFilter('scheduled')}
+          className={`tab ${activeTab === 'inactive' ? 'active' : ''}`}
+          onClick={() => setActiveTab('inactive')}
         >
-          Interview Scheduled
-        </button>
-        <button 
-          className={`client-tab-btn ${interviewStatusFilter === 'pending' ? 'active' : ''}`}
-          onClick={() => setInterviewStatusFilter('pending')}
-        >
-          Pending Placement
+          Inactive Clients ({inactiveTotal})
         </button>
       </div>
+
+      {/* Tabs Row (only for active clients) */}
+      {activeTab === 'active' && (
+        <div className="clients-tabs-container">
+          <button 
+            className={`client-tab-btn ${interviewStatusFilter === '' ? 'active' : ''}`}
+            onClick={() => setInterviewStatusFilter('')}
+          >
+            All Clients
+          </button>
+          <button 
+            className={`client-tab-btn ${interviewStatusFilter === 'scheduled' ? 'active' : ''}`}
+            onClick={() => setInterviewStatusFilter('scheduled')}
+          >
+            Interview Scheduled
+          </button>
+          <button 
+            className={`client-tab-btn ${interviewStatusFilter === 'pending' ? 'active' : ''}`}
+            onClick={() => setInterviewStatusFilter('pending')}
+          >
+            Pending Placement
+          </button>
+        </div>
+      )}
 
       {/* Filters Row */}
       <div className="filters-bar">
@@ -670,24 +670,12 @@ const Clients = () => {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
-          <select 
-            className="filter-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value={CLIENT_STATUS.ACTIVE}>Active</option>
-            <option value={CLIENT_STATUS.INACTIVE}>Inactive</option>
-          </select>
         </div>
       </div>
 
       {/* Active Clients Section */}
-      {(statusFilter === '' || statusFilter === CLIENT_STATUS.ACTIVE) && (
+      {activeTab === 'active' && (
         <div className="active-clients-section">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>
-            Active Clients ({total})
-          </h3>
           <DataTable
             columns={activeColumns}
             data={activeClients}
@@ -715,12 +703,9 @@ const Clients = () => {
       )}
 
       {/* Inactive Clients Section */}
-      {(statusFilter === '' || statusFilter === CLIENT_STATUS.INACTIVE) && (
-        <div className="inactive-clients-section">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-secondary)' }}>
-            Inactive Clients ({inactiveTotal})
-          </h3>
-          <div className="inactive-table-wrapper">
+      {activeTab === 'inactive' && (
+        <div className="inactive-clients-section" style={{ marginTop: 0, borderTop: 'none', paddingTop: 0 }}>
+          <div className="inactive-table-wrapper" style={{ opacity: 1 }}>
             <DataTable
               columns={inactiveColumns}
               data={inactiveClients}

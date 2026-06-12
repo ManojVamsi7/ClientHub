@@ -455,76 +455,87 @@ const Interviews = () => {
                 type="text"
                 className="form-input"
                 style={{ paddingLeft: '32px' }}
-                placeholder="Search clients by name or email..."
+                placeholder="Search clients by student ID or name..."
                 value={formClientSearch}
                 onChange={(e) => setFormClientSearch(e.target.value)}
                 disabled={formLoading}
               />
             </div>
-            <div style={{
-              maxHeight: '160px',
-              overflowY: 'auto',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(15, 23, 42, 0.3)',
-            }}>
-              {clients.length === 0 ? (
-                <div style={{
-                  padding: '16px',
-                  textAlign: 'center',
-                  color: 'var(--text-muted)',
-                  fontSize: '0.85rem',
-                }}>
-                  No clients found. Add clients in the Clients section first.
-                </div>
-              ) : (
-                clients.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      if (!formLoading) {
-                        setFormClientId(c.id);
-                        setSelectedClientInfo(c);
-                      }
-                    }}
-                    style={{
-                      padding: '10px 14px',
-                      cursor: formLoading ? 'default' : 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      backgroundColor: formClientId === c.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                      borderBottom: '1px solid var(--border-subtle)',
-                      transition: 'background-color 0.15s ease',
-                      borderLeft: formClientId === c.id ? '3px solid var(--primary)' : '3px solid transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{c.name}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {c.email || 'No email'} {c.phone ? `• ${c.phone}` : ''}
-                      </span>
-                    </div>
-                    {formClientId === c.id && (
-                      <span style={{
-                        color: 'var(--primary)',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-sm)',
-                      }}>Selected</span>
-                    )}
+            {formClientSearch.trim() && (
+              <div style={{
+                maxHeight: '160px',
+                overflowY: 'auto',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                position: 'absolute',
+                zIndex: 10,
+                width: '100%',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              }}>
+                {clients.length === 0 ? (
+                  <div style={{
+                    padding: '16px',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.85rem',
+                  }}>
+                    No clients found.
                   </div>
-                ))
-              )}
-            </div>
+                ) : (
+                  clients.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => {
+                        if (!formLoading) {
+                          setFormClientId(c.id);
+                          setSelectedClientInfo(c);
+                          setFormClientSearch(''); // Clear search to hide dropdown
+                        }
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        cursor: formLoading ? 'default' : 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: formClientId === c.id ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        transition: 'background-color 0.15s ease',
+                        borderLeft: formClientId === c.id ? '3px solid var(--primary)' : '3px solid transparent',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formClientId !== c.id) e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                        <span style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)', minWidth: '80px' }}>
+                          {c.student_id || 'No ID'}
+                        </span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>— {c.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                          ({c.email || 'No email'})
+                        </span>
+                      </div>
+                      {formClientId === c.id && (
+                        <span style={{
+                          color: 'var(--primary)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                          marginLeft: '8px',
+                        }}>Selected</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
             {formErrors.clientId && (
               <span style={{ color: 'var(--error)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
                 {formErrors.clientId}
@@ -533,15 +544,51 @@ const Interviews = () => {
             {selectedClientInfo && (
               <div style={{
                 marginTop: '8px',
-                padding: '8px 12px',
+                padding: '10px 14px',
                 backgroundColor: 'rgba(99, 102, 241, 0.08)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid rgba(99, 102, 241, 0.2)',
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 color: 'var(--text-secondary)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
               }}>
-                <strong style={{ color: 'var(--primary)' }}>Selected:</strong> {selectedClientInfo.name}
-                {selectedClientInfo.email && ` — ${selectedClientInfo.email}`}
+                <div>
+                  <strong style={{ color: 'var(--primary)' }}>Selected:</strong>{' '}
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{selectedClientInfo.student_id || 'No ID'}</span> - {selectedClientInfo.name}
+                  {selectedClientInfo.email && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '6px' }}>({selectedClientInfo.email})</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormClientId('');
+                    setSelectedClientInfo(null);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Clear selection"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--error)';
+                    e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             )}
           </div>
