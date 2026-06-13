@@ -16,18 +16,7 @@ Start the entire stack (PostgreSQL database, backend REST API, and built React c
 3. The app is ready! Open [http://localhost:3000](http://localhost:3000) in your browser.
 4. Sign in with the default credentials listed below.
 
----
 
-## 🔑 Default Credentials (Seeded Users)
-
-| Role | Email | Password | Permissions |
-|---|---|---|---|
-| **Admin** | `admin@example.com` | `Admin123!` | Full CRUD on all data, register users, permanent deletes |
-| **Recruiter** | `sarah@example.com` | `Recruit123!` | Create & edit clients, queries, calls, mistakes. Cannot delete. |
-| **Recruiter** | `mike@example.com` | `Recruit123!` | Create & edit clients, queries, calls, mistakes. Cannot delete. |
-| **Viewer** | `viewer@example.com` | `Viewer123!` | Read-only access to all dashboards and tables. No updates. |
-
----
 
 ## 🛠️ Local Development (Separate Services)
 
