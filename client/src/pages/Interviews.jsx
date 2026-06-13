@@ -168,30 +168,10 @@ const Interviews = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Check for duplicate interview (same client + same date)
-  const checkDuplicate = () => {
-    if (!formClientId || !formDate) return false;
-    return interviews.some(
-      (iv) =>
-        iv.client_id === formClientId &&
-        iv.call_date &&
-        iv.call_date.substring(0, 10) === formDate
-    );
-  };
-
   // Submit form
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
-    // Duplicate guard
-    if (checkDuplicate()) {
-      toast.error(
-        `⚠️ An interview for ${selectedClientInfo?.name || 'this client'} on ${formDate} already exists. Change the date or select a different client.`,
-        { duration: 5000 }
-      );
-      return;
-    }
 
     setFormLoading(true);
     const payload = {
